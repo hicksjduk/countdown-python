@@ -17,18 +17,17 @@ def step(context, target, numbers):
     nums = [int(n.strip()) for n in numbers.split(",")]
     context.result = solve(context.target, *nums)
 
-@then("a solution is found whose value equals the target number")
-def step(context):
-    assert_that(context.result.value, equal_to(context.target))
-
-@then(parsers.parse("a solution is found whose value equals {value}"))
-def step(context, value):
-    assert_that(context.result.value, equal_to(int(value)))
-
-@then(parsers.parse("the solution found uses {count} numbers"))
-@then(parsers.parse("the solution found uses <count> numbers"))
+@then(parsers.parse("a solution is found whose value equals the target number and which uses <count> numbers"))
 def step(context, count):
-    assert_that(context.result.count, equal_to(int(count)))
+    check_found_result(context.result, context.target, int(count))
+
+@then(parsers.parse("a solution is found whose value equals {value} and which uses {count} numbers"))
+def step(context, value, count):
+    check_found_result(context.result, int(value), int(count))
+
+def check_found_result(result, value, count):
+    assert_that(result.value, equal_to(int(value)))
+    assert_that(result.count, equal_to(int(count)))
 
 @then("no solution is found")
 def step(context):

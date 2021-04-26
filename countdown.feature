@@ -2,8 +2,7 @@ Feature: Countdown numbers solver
 
   Scenario Outline: Exact solution found
     When I call the solver with target number <target> and numbers <numbers>
-    Then a solution is found whose value equals the target number
-    And the solution found uses <count> numbers
+    Then a solution is found whose value equals the target number and which uses <count> numbers
 
   Examples:
     | target | numbers        | count |
@@ -14,8 +13,7 @@ Feature: Countdown numbers solver
 
   Scenario: Non-exact solution found
     When I call the solver with target number 954 and numbers 50, 75, 25, 100, 5, 8
-    Then a solution is found whose value equals 955
-    And the solution found uses 5 numbers
+    Then a solution is found whose value equals 955 and which uses 5 numbers
 
   Scenario: No solution found
     When I call the solver with target number 999 and numbers 1,2,3,4,5,6
