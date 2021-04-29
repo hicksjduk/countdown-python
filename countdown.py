@@ -107,21 +107,33 @@ def betterChecker(target):
         return expr1 if expr1.count <= expr2.count else expr2
     return better
 
-def solve(target, *numbers):
-    logging.info("--------------------------------")
-    logging.info(f"Target: {target}, numbers: {numbers}")
+def logIt(msg):
+    logging.info(msg)
+
+def solveIt(target, numbers, log):
+    log("--------------------------------")
+    log(f"Target: {target}, numbers: {numbers}")
     start = monotonic()
+    answer = None
+    for s in solution(target, numbers):
+        log(s)
+        answer = s
+    end = monotonic()
+    if not answer:
+        log("No solution found")
+    log(f"Completed in {end-start}s")
+    log("--------------------------------")
+    return answer
+
+def solution(target, numbers):
     answer = None
     better = betterChecker(target)
     for p in permute([numberExpression(n) for n in numbers]):
         for e in expressions(p):
             b = better(answer, e)
             if b != answer:
-                logging.info(str(b))
                 answer = b
-    end = monotonic()
-    if not answer:
-        logging.info("No solution found")
-    logging.info(f"Completed in {end-start}s")
-    logging.info("--------------------------------")
-    return answer
+                yield b
+
+def solve(target, *numbers):
+    return solveIt(target, numbers, log=logIt)
