@@ -13,21 +13,21 @@ operator = SimpleNamespace(
 )
 
 class Expression:
-    def __init__(self, value, priority, string, count):
+    def __init__(self, value, priority, string, numbers):
         self.value = value
         self.priority = priority
         self.string = string
-        self.count = count
+        self.numbers = numbers
 
     def __str__(self):
         return f'{self.string} = {self.value}'
 
 def numberExpression(number):
-    return Expression(value=number, priority=priority.atomic, string=f'{number}', count=1)
+    return Expression(value=number, priority=priority.atomic, string=f'{number}', numbers=[number])
 
 def arithmeticExpression(leftOperand, operator, rightOperand):
     return Expression(value=operator.evaluator(leftOperand.value, rightOperand.value), priority=operator.priority,
-            string=formatExpr(leftOperand, operator, rightOperand), count=leftOperand.count + rightOperand.count)
+            string=formatExpr(leftOperand, operator, rightOperand), numbers=[*leftOperand.numbers, *rightOperand.numbers])
 
 def formatExpr(leftOperand, operator, rightOperand):
     elements = [
@@ -104,28 +104,10 @@ def betterChecker(target):
             return None
         if diff1 != diff2:
             return expr1 if diff1 < diff2 else expr2
-        return expr1 if expr1.count <= expr2.count else expr2
+        return expr1 if len(expr1.numbers) <= len(expr2.numbers) else expr2
     return better
 
-def logIt(msg):
-    logging.info(msg)
-
-def solveIt(target, numbers, log):
-    log("--------------------------------")
-    log(f"Target: {target}, numbers: {numbers}")
-    start = monotonic()
-    answer = None
-    for s in solution(target, numbers):
-        log(s)
-        answer = s
-    end = monotonic()
-    if not answer:
-        log("No solution found")
-    log(f"Completed in {end-start}s")
-    log("--------------------------------")
-    return answer
-
-def solution(target, numbers):
+def solutions(target, numbers):
     answer = None
     better = betterChecker(target)
     for p in permute([numberExpression(n) for n in numbers]):
@@ -136,4 +118,17 @@ def solution(target, numbers):
                 yield b
 
 def solve(target, *numbers):
-    return solveIt(target, numbers, log=logIt)
+    log = logging.info
+    log("--------------------------------")
+    log(f"Target: {target}, numbers: {numbers}")
+    start = monotonic()
+    answer = None
+    for s in solutions(target, numbers):
+        log(s)
+        answer = s
+    end = monotonic()
+    if not answer:
+        log("No solution found")
+    log(f"Completed in {end-start}s")
+    log("--------------------------------")
+    return answer
