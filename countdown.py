@@ -41,25 +41,42 @@ def formatExpr(leftOperand, operator, rightOperand):
 def formatOperand(operand, parenthesesNeeded):
     return f'({operand.string})' if parenthesesNeeded else operand.string
 
-def addCombiner(a, b):
-    return arithmeticExpression(a, operator.add, b)
+def addCombiner(a):
+    def combiner(b):
+        return arithmeticExpression(a, operator.add, b)
+    return combiner
 
-def subtractCombiner(a, b):
-    if a.value <= b.value or a.value == b.value * 2:
+def subtractCombiner(a):
+    if a.value < 3:
         return None
-    return arithmeticExpression(a, operator.subtract, b)
+    def combiner(b):
+        if a.value <= b.value or a.value == b.value * 2:
+            return None
+        return arithmeticExpression(a, operator.subtract, b)
+    return combiner
 
-def multiplyCombiner(a, b):
-    if a.value == 1 or b.value == 1:
+def multiplyCombiner(a):
+    if a.value == 1:
         return None
-    return arithmeticExpression(a, operator.multiply, b)
+    def combiner(b):
+        if b.value == 1:
+            return None
+        return arithmeticExpression(a, operator.multiply, b)
+    return combiner
 
-def divideCombiner(a, b):
-    if b.value == 1 or a.value % b.value or a.value == b.value ** 2:
+def divideCombiner(a):
+    if a.value == 1:
         return None
-    return arithmeticExpression(a, operator.divide, b)
+    def combiner(b):
+        if b.value == 1 or a.value % b.value or a.value == b.value ** 2:
+            return None
+        return arithmeticExpression(a, operator.divide, b)
+    return combiner
 
-combiners = [addCombiner, subtractCombiner, multiplyCombiner, divideCombiner]
+combinerCreators = [addCombiner, subtractCombiner, multiplyCombiner, divideCombiner]
+
+def combiners(expr):
+    return (c for c in (cc(expr) for cc in combinerCreators) if c is not None)
 
 def permute(expressions):
     if len(expressions) == 1:
@@ -91,9 +108,10 @@ def expressions(permutation):
         used = usedChecker(lambda e: e.value)
         for i in range(1, len(permutation)):
             for left in expressions(permutation[:i]):
+                combs = combiners(left)
                 for right in expressions(permutation[i:]):
-                    for comb in combiners:
-                        expr = comb(left, right)
+                    for comb in combs:
+                        expr = comb(right)
                         if expr and not used(expr):
                             yield expr
 
