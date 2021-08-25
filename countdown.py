@@ -20,69 +20,73 @@ class Expression:
         self.numbers = numbers
 
     def __str__(self):
-        return f'{self.string} = {self.value}'
+        return f'{self.string()} = {self.value}'
 
-def numberExpression(number):
-    return Expression(value=number, priority=priority.atomic, string=f'{number}', numbers=[number])
+def number_expression(number):
+    def to_string():
+        return f'{number}'
+    return Expression(value=number, priority=priority.atomic, string=to_string, numbers=[number])
 
-def arithmeticExpression(leftOperand, operator, rightOperand):
-    return Expression(value=operator.evaluator(leftOperand.value, rightOperand.value), priority=operator.priority,
-            string=formatExpr(leftOperand, operator, rightOperand), numbers=[*leftOperand.numbers, *rightOperand.numbers])
+def arithmetic_expression(left_operand, operator, right_operand):
+    def to_string():
+        return format_expr(left_operand, operator, right_operand)
+    return Expression(value=operator.evaluator(left_operand.value, right_operand.value), priority=operator.priority,
+                      string=to_string, numbers=[*left_operand.numbers, *right_operand.numbers])
 
-def formatExpr(leftOperand, operator, rightOperand):
+def format_expr(leftOperand, operator, rightOperand):
     elements = [
-        formatOperand(leftOperand, leftOperand.priority < operator.priority),
+        format_operand(leftOperand, leftOperand.priority < operator.priority),
         operator.symbol,
-        formatOperand(rightOperand, rightOperand.priority < operator.priority or
-                      (rightOperand.priority == operator.priority and not operator.commutative))
+        format_operand(rightOperand, rightOperand.priority < operator.priority or
+                       (rightOperand.priority == operator.priority and not operator.commutative))
     ]
     return " ".join(elements)
 
-def formatOperand(operand, parenthesesNeeded):
-    return f'({operand.string})' if parenthesesNeeded else operand.string
+def format_operand(operand, parenthesesNeeded):
+    return f'({operand.string()})' if parenthesesNeeded else operand.string()
 
-def addCombiner(a):
+def add_combiner(a):
     def combiner(b):
-        return arithmeticExpression(a, operator.add, b)
+        return arithmetic_expression(a, operator.add, b)
     return combiner
 
-def subtractCombiner(a):
+def subtract_combiner(a):
     if a.value < 3:
         return None
     def combiner(b):
         if a.value <= b.value or a.value == b.value * 2:
             return None
-        return arithmeticExpression(a, operator.subtract, b)
+        return arithmetic_expression(a, operator.subtract, b)
     return combiner
 
-def multiplyCombiner(a):
+def multiply_combiner(a):
     if a.value == 1:
         return None
     def combiner(b):
         if b.value == 1:
             return None
-        return arithmeticExpression(a, operator.multiply, b)
+        return arithmetic_expression(a, operator.multiply, b)
     return combiner
 
-def divideCombiner(a):
+def divide_combiner(a):
     if a.value == 1:
         return None
     def combiner(b):
         if b.value == 1 or a.value % b.value or a.value == b.value ** 2:
             return None
-        return arithmeticExpression(a, operator.divide, b)
+        return arithmetic_expression(a, operator.divide, b)
     return combiner
 
-combinerCreators = [addCombiner, subtractCombiner, multiplyCombiner, divideCombiner]
+combiner_creators = [add_combiner, subtract_combiner, multiply_combiner, divide_combiner]
 
-def combiners(expr):
-    return (c for c in (cc(expr) for cc in combinerCreators) if c is not None)
+def combiners_using(expr):
+    return (c for c in (cc(expr) for cc in combiner_creators) if c)
 
 def permute(expressions):
     if len(expressions) == 1:
         yield expressions
     elif expressions:
-        used = usedChecker(lambda e: e.value)
+        used = used_checker(lambda e: e.value)
         for i in range(len(expressions)):
             value = expressions[i]
             if not used(value):
@@ -91,7 +95,7 @@ def permute(expressions):
                 for p in permute(others):
                     yield [value, *p]
 
-def usedChecker(idGenerator):
+def used_checker(idGenerator):
     usedValues = set()
     def used(value):
         id = idGenerator(value)
@@ -105,19 +109,19 @@ def expressions(permutation):
     if len(permutation) == 1:
         yield permutation[0]
     elif permutation:
-        used = usedChecker(lambda e: e.value)
+        used = used_checker(lambda e: e.value)
         for i in range(1, len(permutation)):
             for left in expressions(permutation[:i]):
-                combs = combiners(left)
+                combiners = combiners_using(left)
                 for right in expressions(permutation[i:]):
-                    for comb in combs:
-                        expr = comb(right)
+                    for combine in combiners:
+                        expr = combine(right)
                         if expr and not used(expr):
                             yield expr
 
-def betterChecker(target):
+def better_checker(target):
     def better(expr1, expr2):
-        diff1, diff2 = (1000 if not e else abs(target - e.value) for e in (expr1, expr2))
+        diff1, diff2 = (11 if not e else abs(target - e.value) for e in (expr1, expr2))
         if diff1 > 10 and diff2 > 10:
             return None
         if diff1 != diff2:
@@ -127,8 +131,8 @@ def betterChecker(target):
 
 def solutions(target, numbers):
     answer = None
-    better = betterChecker(target)
-    for p in permute([numberExpression(n) for n in numbers]):
+    better = better_checker(target)
+    for p in permute([number_expression(n) for n in numbers]):
         for e in expressions(p):
             b = better(answer, e)
             if b != answer:
