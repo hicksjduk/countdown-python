@@ -13,11 +13,12 @@ operator = SimpleNamespace(
 )
 
 class Expression:
-    def __init__(self, value, priority, string, numbers):
+    def __init__(self, value, priority, string, numbers, parentheses):
         self.value = value
         self.priority = priority
         self.string = string
         self.numbers = numbers
+        self.parentheses = parentheses
 
     def __str__(self):
         return f'{self.string()} = {self.value}'
@@ -25,25 +26,34 @@ class Expression:
 def number_expression(number):
     def to_string():
         return f'{number}'
-    return Expression(value=number, priority=priority.atomic, string=to_string, numbers=[number])
+    return Expression(value=number, priority=priority.atomic, string=to_string, numbers=[number], parentheses=0)
 
 def arithmetic_expression(left_operand, operator, right_operand):
     def to_string():
         return format_expr(left_operand, operator, right_operand)
+    parentheses = sum((1 if parenthesise_left(operator, left_operand) else 0,
+                       1 if parenthesise_right(operator, right_operand) else 0,
+                       left_operand.parentheses, right_operand.parentheses))
     return Expression(value=operator.evaluator(left_operand.value, right_operand.value), priority=operator.priority,
-                      string=to_string, numbers=[*left_operand.numbers, *right_operand.numbers])
+                      string=to_string, numbers=[*left_operand.numbers, *right_operand.numbers], parentheses=parentheses)
 
 def format_expr(leftOperand, operator, rightOperand):
     elements = [
-        format_operand(leftOperand, leftOperand.priority < operator.priority),
+        format_operand(leftOperand, parenthesise_left(operator, leftOperand)),
         operator.symbol,
-        format_operand(rightOperand, rightOperand.priority < operator.priority or
-                       (rightOperand.priority == operator.priority and not operator.commutative))
+        format_operand(rightOperand, parenthesise_right(operator, rightOperand))
     ]
     return " ".join(elements)
 
 def format_operand(operand, parenthesesNeeded):
     return f'({operand.string()})' if parenthesesNeeded else operand.string()
+
+def parenthesise_left(operator, leftOperand):
+    return leftOperand.priority < operator.priority
+
+def parenthesise_right(operator, rightOperand):
+    return rightOperand.priority < operator.priority or \
+        (rightOperand.priority == operator.priority and not operator.commutative)
 
 def add_combiner(a):
     def combiner(b):
@@ -109,14 +119,13 @@ def expressions(permutation):
     if len(permutation) == 1:
         yield permutation[0]
     elif permutation:
-        used = used_checker(lambda e: e.value)
         for i in range(1, len(permutation)):
             for left in expressions(permutation[:i]):
                 combiners = combiners_using(left)
                 for right in expressions(permutation[i:]):
                     for combine in combiners:
                         expr = combine(right)
-                        if expr and not used(expr):
+                        if expr:
                             yield expr
 
 def better_checker(target):
@@ -126,7 +135,10 @@ def better_checker(target):
             return None
         if diff1 != diff2:
             return expr1 if diff1 < diff2 else expr2
-        return expr1 if len(expr1.numbers) <= len(expr2.numbers) else expr2
+        count1, count2 = (len(e.numbers) for e in (expr1, expr2))
+        if count1 != count2:
+            return expr1 if count1 < count2 else expr2
+        return expr1 if expr1.parentheses <= expr2.parentheses else expr2
     return better
 
 def solutions(target, numbers):
