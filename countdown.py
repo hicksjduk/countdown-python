@@ -128,28 +128,38 @@ def expressions(permutation):
                         if expr:
                             yield expr
 
+
+def differenceFrom(target):
+    def difference(expr):
+        return abs(target - expr.value)
+    return difference
+
 def better_checker(target):
+    def count(expr):
+        return len(expr.numbers)
+    def parens(expr):
+        return expr.parentheses
+    extractors = [differenceFrom(target), count, parens]
     def better(expr1, expr2):
-        diff1, diff2 = (11 if not e else abs(target - e.value) for e in (expr1, expr2))
-        if diff1 > 10 and diff2 > 10:
-            return None
-        if diff1 != diff2:
-            return expr1 if diff1 < diff2 else expr2
-        count1, count2 = (len(e.numbers) for e in (expr1, expr2))
-        if count1 != count2:
-            return expr1 if count1 < count2 else expr2
-        return expr1 if expr1.parentheses <= expr2.parentheses else expr2
+        for f in extractors:
+            v1, v2 = (f(e) for e in (expr1, expr2))
+            if v1 != v2:
+                return expr1 if v1 < v2 else expr2
+        return expr1
     return better
 
 def solutions(target, numbers):
     answer = None
+    difference = differenceFrom(target)
     better = better_checker(target)
     for p in permute([number_expression(n) for n in numbers]):
         for e in expressions(p):
-            b = better(answer, e)
-            if b != answer:
-                answer = b
-                yield b
+            if difference(e) > 10:
+                continue
+            if answer and better(answer, e) is answer:
+                continue
+            answer = e
+            yield e
 
 def solve(target, *numbers):
     log = logging.info
